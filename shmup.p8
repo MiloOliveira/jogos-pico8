@@ -64,7 +64,7 @@ sprites = {
      inimigos={};
      particulas={};
      shockwaves={};
-     cores_explosion = {8,9,10,5};
+     
      
      tempo = 0;
      trava_wave = 0;
@@ -212,17 +212,17 @@ function criar_estrelas()
     end
 end
 
-function mover_particula()
+function mover_particula(paleta)
      cor = 0;
 
      for part in all(particulas) do
           if part.idade >= part.vida_maxima  then
                del(particulas,part);
           end
-          cor = ceil(((part.idade / part.vida_maxima) * #cores_explosion));
+          cor = ceil(((part.idade / part.vida_maxima) * #part.paleta));
           part.x += part.speed_x;
           part.y += part.speed_y;
-          part.cor = cores_explosion[cor];
+          part.cor = part.paleta[cor];
           part.idade +=1;
      end
 end
@@ -293,7 +293,7 @@ function validar_morte_player()
      if (player.hp == 0) and modo=='jogo' then
           modo = "morto";
           trava_input = var.delay_input_travado * var.fps;
-          criar_explosion(player);
+          criar_explosion(player, paleta_explosion_player);
      end
 end
 
@@ -381,23 +381,14 @@ function criar_inimgo()
           var.delay_spawn -= 1;
      end
 
-     local direc = 0;
-
-
-     if (rnd(1) > 0.5) then
-          direc = var.esquerda;
-     else
-          direc = var.direita;
-     end
-
      inimigo_teste = {
           x = rnd(110) + 10;
           y = -8;
           hp = 1;
-          sprite_atual = sprites.animation_inimigo_ini;
+          sprite_inicial = 28;
+          sprite_final = 31;
+          sprite_atual = 0;
           timer_animation = 0;
-          direction = direc;
-          timer_mudar_direction = (var.delay_direction * var.fps);
           hitbox = {
                left = 0;
                right = 0;
@@ -410,16 +401,12 @@ function criar_inimgo()
 end
 
 function mover_inimigos()
-
      for inimigo in all(inimigos) do
           animar_inimigo(inimigo);
-          mudar_direction_inimigo(inimigo);
-          apagar_inimigo(inimigo);
           inimigo.y += var.inimigo_speed;
-
-          inimigo.x += (var.inimigo_speed * inimigo.direction);
+          
           atualizar_hitbox(inimigo,hitbox_inimigo);
-
+          
           for bala in all(balas) do
                if colidir(bala, inimigo) then
                     inimigo.hp -=1;
@@ -427,6 +414,8 @@ function mover_inimigos()
                     sfx(3);
                end
           end
+
+          apagar_inimigo(inimigo);
      end
 end
 
@@ -434,7 +423,7 @@ function apagar_inimigo(inim) --No momento, vai sれは recolocar no topo
      if inim.y > 128 or inim.hp == 0 then
           del(inimigos,inim);
           if inim.hp == 0 then
-               criar_explosion(inim);
+               criar_explosion(inim, paleta_explosion_inim);
                quantia_inimigos -=1;
           end
 
@@ -456,7 +445,7 @@ function validar_fim_wave()
      end
 end
 
-function criar_explosion(objeto)  
+function criar_explosion(objeto, paleta)  
      for i=1,30 do
           local part={
                x = objeto.x + 4;
@@ -467,6 +456,7 @@ function criar_explosion(objeto)
                vida_maxima = ceil(rnd(var.explosion.variancia_vida)) + var.explosion.vida_media;
                raio = ceil(rnd(4));
                cor = 0;
+               paleta = paleta;
           }
           add(particulas,part);
           criar_shockwave(part.x, part.y);
@@ -483,22 +473,13 @@ function criar_shockwave(x,y)
      add(shockwaves,sw);
 end
 
-function mudar_direction_inimigo(inim)
-     if (inim.timer_mudar_direction <= 0)  or inim.x > 120 or inim.x < 10 then
-          inim.direction = (inim.direction * (-1));
-          inim.timer_mudar_direction = (var.delay_direction * var.fps);
-     else 
-          inim.timer_mudar_direction -= 1;
-     end 
-     
-end
+
 
 function animar_inimigo(inim)
                if inim.timer_animation <= 0 then --Checa se estれく na hora de trocar o sprite
 
-               if inim.sprite_atual == sprites.animation_inimigo_fin then --retorna pro inicio da animaれせれこo
-
-                    inim.sprite_atual = sprites.animation_inimigo_ini;
+               if inim.sprite_atual == inim.sprite_final or inim.sprite_atual == 0 then --retorna pro inicio da animaれせれこo
+                    inim.sprite_atual = inim.sprite_inicial;
                     inim.timer_animation = var.animation_inimigo_por_frame * var.fps;   
 
                else --passa para o prれはximo
@@ -580,6 +561,10 @@ function update_wave()
           
      end
 end
+-->8
+--Paletas
+paleta_explosion_inim = {8,9,10,5};
+paleta_explosion_player = {7,11,1,6}
 
 
 __gfx__
