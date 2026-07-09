@@ -511,32 +511,35 @@ end
 
 function atualizar_hitbox(persona, dados)
      persona.hitbox = {
-               left = persona.x + dados.largura_inicio;
-               right = persona.x + dados.largura_fim;
-               top = persona.y + dados.altura_inicio;
-               bottom = persona.y + dados.altura_fim;
+               left = persona.x + dados.left;
+               right = persona.x + dados.right;
+               top = persona.y + dados.top;
+               bottom = persona.y + dados.bottom;
           }
 end
 
+-->8
+--hitboxes e inimigos (Constantes imutáveis)
+
 hitbox_player = { --Sempre vai do 0 ao 7, pois comeれせa no pixel 1,1
-     largura_inicio = 1; --Serれく o pixel inicial
-     largura_fim = 6; -- A posiれせれこo da paralela
-     altura_inicio = 0;
-     altura_fim = 7;
+     left = 1; --Serれく o pixel inicial
+     right = 6; -- A posiれせれこo da paralela
+     top = 0;
+     bottom = 7;
 }
 
 hitbox_inimigo = { --do 0 ao 7
-     largura_inicio = 0; --Serれく o pixel inicial
-     largura_fim = 7; -- A posiれせれこo da paralela
-     altura_inicio = 0;
-     altura_fim = 5;
+     left = 0; --Serれく o pixel inicial
+     right = 7; -- A posiれせれこo da paralela
+     top = 0;
+     bottom = 5;
 }
 
 hitbox_bala = {
-     largura_inicio = 1; --Serれく o pixel inicial
-     largura_fim = 4; -- A posiれせれこo da paralela
-     altura_inicio = 0;
-     altura_fim = 6;  
+     left = 1; --Serれく o pixel inicial
+     right = 4; -- A posiれせれこo da paralela
+     top = 0;
+     bottom = 6;  
 }
 
 -->8
@@ -564,7 +567,7 @@ end
 -->8
 --Paletas
 paleta_explosion_inim = {8,9,10,5};
-paleta_explosion_player = {7,11,1,6}
+paleta_explosion_player = {7,12,1,6}
 
 
 __gfx__
