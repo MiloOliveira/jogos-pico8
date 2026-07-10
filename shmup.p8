@@ -22,14 +22,12 @@ sprites = {
           fps = 30;
           
           speed = 2;
-          inimigo_speed = 2;
           bala_speed = 4;
           
           animation_inimigo_por_frame = 0.1;
           delay_tiro = 0.1;
           delay_inv = 3;
           delay_spawn = 2;
-          delay_direction=0.5;
           delay_input_travado = 5;
           
           esquerda = -1;
@@ -49,6 +47,7 @@ sprites = {
           };
 
           transition_waves = 5;
+          quantia_waves = 5;
      }
 
      trava_tiro = 0;
@@ -376,34 +375,37 @@ end
 
 -->8
 --Inimigos
-function criar_inimgo()
+function criar_inimgo(id)
      if var.delay_spawn > 0 then
           var.delay_spawn -= 1;
      end
-
-     inimigo_teste = {
-          x = rnd(110) + 10;
-          y = -8;
-          hp = 1;
-          sprite_inicial = 28;
-          sprite_final = 31;
-          sprite_atual = 0;
-          timer_animation = 0;
-          hitbox = {
-               left = 0;
-               right = 0;
-               top = 0;
-               bottom = 0;
+               inimigo_criado = {
+                    x = rnd(110) + 10;--
+                    y = -8;--
+               sprite_atual = 0;--
+               timer_animation = 0;--
+               hitbox = {
+                    left = 0;
+                    right = 0;
+                    top = 0;
+                    bottom = 0;
+               };
+               --Partes aqui vêm de dados
+               hp = dados_inimigos[id].hp;
+               sprite_inicial = dados_inimigos[id].sprite_inicial;
+               sprite_final = dados_inimigos[id].sprite_final;
+               hitbox_dados = dados_inimigos[id].hitbox; 
+               --speed_x = dados_inimigos[id].speed_x;
+               speed_y = dados_inimigos[id].speed_y;
           }
-          
-     }
-     add(inimigos,inimigo_teste);
+
+     add(inimigos,inimigo_criado);
 end
 
 function mover_inimigos()
      for inimigo in all(inimigos) do
           animar_inimigo(inimigo);
-          inimigo.y += var.inimigo_speed;
+          inimigo.y += inimigo.speed_y;
           
           atualizar_hitbox(inimigo,hitbox_inimigo);
           
@@ -421,18 +423,23 @@ end
 
 function apagar_inimigo(inim) --No momento, vai sれは recolocar no topo
      if inim.y > 128 or inim.hp == 0 then
-          del(inimigos,inim);
+
+          
           if inim.hp == 0 then
                criar_explosion(inim, paleta_explosion_inim);
                quantia_inimigos -=1;
+               del(inimigos,inim);
+          else
+               inim.x = rnd(flr(100))+10;
+               inim.y = -16;
           end
 
           
           validar_fim_wave();
 
-          if not (modo == 'morto' or modo=='wave') then
-               criar_inimgo();
-          end
+          -- if not (modo == 'morto' or modo=='wave') then
+          --      criar_inimgo();
+          -- end
 
      end
 end
@@ -542,26 +549,84 @@ hitbox_bala = {
      bottom = 6;  
 }
 
+dados_inimigos = {
+     {
+          id = 1;
+          hp = 3;
+          sprite_inicial = 28;
+          sprite_final = 31;
+          speed_x = 0;
+          speed_y = 1;
+          hitbox = {
+               left = 0; --Serれく o pixel inicial
+               right = 7; -- A posiれせれこo da paralela
+               top = 0;
+               bottom = 5;
+          }
+     },
+     {
+          id = 2;
+          hp = 5;
+          sprite_inicial = 24;
+          sprite_final = 27;
+          speed_x = 0;
+          speed_y = 0.5;
+          hitbox = {
+               left = 0; --Serれく o pixel inicial
+               right = 7; -- A posiれせれこo da paralela
+               top = 0;
+               bottom = 5;
+          }
+     },
+     {
+          id = 3;
+          hp = 1;
+          sprite_inicial = 20;
+          sprite_final = 23;
+          speed_x = 0;
+          speed_y = 2;
+          hitbox = {
+               left = 0; --Serれく o pixel inicial
+               right = 7; -- A posiれせれこo da paralela
+               top = 0;
+               bottom = 5;
+          }
+     },
+}
 -->8
 --waves
 
 function draw_wave()
      draw_jogo();
-     print('wave '..wave,50,64,11);
+     if wave <= var.quantia_waves  then
+          print('wave '..wave,50,64,11);
+     end
 end
 
 function update_wave()
-     tam_hordas = {5,6,7,8,9,10};
-     update_jogo();
-     quantia_inimigos = tam_hordas[wave];
+     id_inimigos_hordas = {
+          {1,2,3,2,1},
+          {1,1,1,1,1,1},
+          {3,3,3,3,3,3,3},
+          {2,1,1,1,2,3},
+          {3,3,3,2,1},
+     }
+     if wave <= var.quantia_waves  then 
+          horda_atual = id_inimigos_hordas[wave];
+          update_jogo();
+          quantia_inimigos = #id_inimigos_hordas[wave];
+     else
+          modo='start';
+     end
 
 
-     if trava_wave > 0 then
+     if trava_wave > 0  then
           trava_wave-=1;
      else
-          criar_inimgo()
+          for id in all(horda_atual) do
+               criar_inimgo(id);
+          end
           modo='jogo';
-          
      end
 end
 -->8
