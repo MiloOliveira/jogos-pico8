@@ -12,10 +12,8 @@ sprites = {
      hp_vazio = 5;
 
      bala = 9;
-     
-     animation_inimigo_ini = 28;
-     animation_inimigo_fin = 31;
-
+     bala_inimigo_apagada = 9;
+     bala_inimigo_acesa = 10;
 }
 
      var = {
@@ -61,6 +59,7 @@ sprites = {
      estrelas = {};
      balas={};
      inimigos={};
+     balas_inimigos = {};
      particulas={};
      shockwaves={};
      
@@ -183,10 +182,18 @@ function mover_bala()
                atualizar_hitbox(bala,hitbox_bala);
           else 
                del(balas,bala);
-          end
-          
+          end  
      end
-     
+
+     for bul in all(balas_inimigos) do 
+          if bul.x < 128 and bul.x > 0 and bul.y > 0 and bul.y < 128 then 
+               bul.x +=bul.sx;
+               bul.y += bul.sy;
+               atualizar_hitbox(bul,hitbox_bala_inimiga)
+          else 
+               del(balas_inimigos,bul);
+          end
+     end   
 end
 
 function mover_estrelas() 
@@ -248,14 +255,9 @@ function draw_jogo()
      draw_inimgo();
      draw_particulas();
      draw_shockwaves();
+     draw_balas();
 
-     if #balas > 0 then  
-          for bala in all(balas) do
-               spr(sprites.bala, bala.x, bala.y);
-          end
-     end
-
-     print();
+     print(#balas_inimigos);
 end
 
 function update_jogo()
@@ -285,6 +287,18 @@ function validar_morte_player()
                end
           end
      end
+
+     for bul in all(balas_inimigos) do
+          if colidir(player,bul) then
+               if player.timer_invencivel <= 0 then
+                    player.hp -= 1;
+                    player.timer_invencivel =var.fps * var.delay_inv;
+                    del(balas_inimigos,bul)
+                    sfx(2);
+               end
+          end
+     end
+
      if player.timer_invencivel > 0 then
           player.timer_invencivel-=1;
      end
@@ -329,6 +343,20 @@ function draw_player()
           spr(player.sprite,player.x,player.y);
      end
      
+end
+
+function draw_balas()
+     if #balas > 0 then  
+          for bala in all(balas) do
+               spr(sprites.bala, bala.x, bala.y);
+          end
+     end
+
+     if #balas_inimigos > 0 then
+          for bul in all(balas_inimigos) do
+               spr(bul.sprite_atual,bul.x, bul.y);
+          end
+     end
 end
 
 -->8
@@ -379,11 +407,12 @@ function criar_inimgo(id)
      if var.delay_spawn > 0 then
           var.delay_spawn -= 1;
      end
-               inimigo_criado = {
-                    x = rnd(110) + 10;--
-                    y = -8;--
+          inimigo_criado = {
+               x = rnd(110) + 10;--
+               y = -8;--
                sprite_atual = 0;--
                timer_animation = 0;--
+               timer_acao = 0;
                hitbox = {
                     left = 0;
                     right = 0;
@@ -391,6 +420,7 @@ function criar_inimgo(id)
                     bottom = 0;
                };
                --Partes aqui vêm de dados
+               id = id;
                hp = dados_inimigos[id].hp;
                sprite_inicial = dados_inimigos[id].sprite_inicial;
                sprite_final = dados_inimigos[id].sprite_final;
@@ -399,6 +429,9 @@ function criar_inimgo(id)
                speed_y = dados_inimigos[id].speed_y;
                largura = dados_inimigos[id].largura;
                altura = dados_inimigos[id].altura;
+               tipo = dados_inimigos[id].tipo;
+               delay_acao = dados_inimigos[id].delay_acao;
+               delay_animacao = dados_inimigos[id].delay_animacao;
           }
 
      add(inimigos,inimigo_criado);
@@ -408,8 +441,8 @@ function mover_inimigos()
      for inimigo in all(inimigos) do
           animar_inimigo(inimigo);
           inimigo.y += inimigo.speed_y;
-          
           atualizar_hitbox(inimigo,hitbox_inimigo);
+
           
           for bala in all(balas) do
                if colidir(bala, inimigo) then
@@ -418,9 +451,53 @@ function mover_inimigos()
                     sfx(3);
                end
           end
-
+          if inimigo.timer_acao == 0 then   
+               --sfx(1);
+               realizar_acao(inimigo);
+               inimigo.timer_acao = inimigo.delay_acao;
+          else 
+               inimigo.timer_acao-=1;
+          end
           apagar_inimigo(inimigo);
      end
+end
+
+function realizar_acao(inim)
+     if inim.tipo == "atirador" then
+          sfx(1)
+          inimigo_atira(inim);
+     end
+end
+
+function inimigo_atira(inim)
+    sfx(1)
+    local balas_geradas = 0;
+    local velocidade = 2; -- velocidade das balas (ajuste conforme necessário)
+    
+     for dados in all(projeteis_inimigos) do
+          if dados.id == inim.id then
+               balas_geradas = dados.qtd;
+          end
+     end
+
+    for i = 1, balas_geradas do
+        local ang = i/balas_geradas; 
+        local bala_inimigo = {
+            x = inim.x,
+            y = inim.y,
+            sx = cos(ang) * velocidade,  -- componente x da velocidade
+            sy = sin(ang) * velocidade,  -- componente y da velocidade
+            sprite_atual = sprites.bala,
+            hitbox = {
+               left = 0;
+               right = 0;
+               top = 0;
+               right = 0;
+            }
+        }
+        inim.timer_animation = inim.delay_acao - 1*var.fps;
+        add(balas_inimigos, bala_inimigo)
+    end
 end
 
 function apagar_inimigo(inim) --No momento, vai sれは recolocar no topo
@@ -489,11 +566,11 @@ function animar_inimigo(inim)
 
                if inim.sprite_atual == inim.sprite_final or inim.sprite_atual == 0 then --retorna pro inicio da animaれせれこo
                     inim.sprite_atual = inim.sprite_inicial;
-                    inim.timer_animation = var.animation_inimigo_por_frame * var.fps;   
+                    inim.timer_animation = inim.delay_animacao;   
 
                else --passa para o prれはximo
                     inim.sprite_atual +=1;
-                    inim.timer_animation = var.animation_inimigo_por_frame * var.fps;   
+                    inim.timer_animation = inim.delay_animacao;   
                end
           else 
                inim.timer_animation -=1;
@@ -517,6 +594,17 @@ function colidir(a, b)
      )
     return colidiu
 end
+
+-- function colidir(ponto, circulo)
+ 
+--     -- distれけncia ao quadrado (evita sqrt se possれとvel)
+--     local dx = circulo.x - ponto.x
+--     local dy = circulo.y - ponto.y
+--     local dist2 = dx*dx + dy*dy
+
+--     return dist2 < circulo.raio*circulo.raio
+-- end
+
 
 function atualizar_hitbox(persona, dados)
      persona.hitbox = {
@@ -551,6 +639,15 @@ hitbox_bala = {
      bottom = 6;  
 }
 
+ hitbox_bala_inimiga = {
+     left = 1;
+     right = 6;
+     top = 1;
+     bottom = 6;
+}
+
+--[tipos: ataque, voar, atirar]
+
 dados_inimigos = {
      {
           id = 1;
@@ -561,6 +658,9 @@ dados_inimigos = {
           speed_y = 1;
           largura = 1;
           altura = 1;
+          tipo = "idle";
+          delay_acao = 5 * var.fps;
+          delay_animacao = 0.1 * var.fps;
           hitbox = {
                left = 0; --Serれく o pixel inicial
                right = 7; -- A posiれせれこo da paralela
@@ -577,6 +677,9 @@ dados_inimigos = {
           speed_y = 0.5;
           largura = 1;
           altura = 1;
+          tipo="atirador";
+          delay_acao = 2 * var.fps;
+          delay_animacao = 0.3 * var.fps;
           hitbox = {
                left = 0; --Serれく o pixel inicial
                right = 7; -- A posiれせれこo da paralela
@@ -593,6 +696,9 @@ dados_inimigos = {
           speed_y = 2;
           largura = 1;
           altura = 1;
+          tipo = "ariete";
+          delay_acao = 0 * var.fps;
+          delay_animacao = 0.1 * var.fps;
           hitbox = {
                left = 0; --Serれく o pixel inicial
                right = 7; -- A posiれせれこo da paralela
@@ -601,6 +707,10 @@ dados_inimigos = {
           }
      },
 }
+
+     projeteis_inimigos = {
+          {id = 2, qtd = 10},
+     }
 -->8
 --waves
 
@@ -613,7 +723,7 @@ end
 
 function update_wave()
      id_inimigos_hordas = {
-          {1,2,3,2,1},
+          {1,2,3,1,2},
           {1,1,1,1,1,1},
           {3,3,3,3,3,3,3},
           {2,1,1,1,2,3},
