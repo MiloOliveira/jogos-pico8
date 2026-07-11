@@ -49,7 +49,7 @@ sprites = {
           transition_waves = 5;
           quantia_waves = 5;
      }
-
+   
      trava_tiro = 0;
      trava_input = 0;
           
@@ -397,6 +397,8 @@ function criar_inimgo(id)
                hitbox_dados = dados_inimigos[id].hitbox; 
                --speed_x = dados_inimigos[id].speed_x;
                speed_y = dados_inimigos[id].speed_y;
+               largura = dados_inimigos[id].largura;
+               altura = dados_inimigos[id].altura;
           }
 
      add(inimigos,inimigo_criado);
@@ -500,7 +502,7 @@ end
 
 function draw_inimgo()
      for inimigo in all(inimigos) do
-          spr(inimigo.sprite_atual,inimigo.x,inimigo.y);
+          spr(inimigo.sprite_atual,inimigo.x,inimigo.y,inimigo.largura,inimigo.altura);
      end
 end
 -->8
@@ -557,6 +559,8 @@ dados_inimigos = {
           sprite_final = 31;
           speed_x = 0;
           speed_y = 1;
+          largura = 1;
+          altura = 1;
           hitbox = {
                left = 0; --Serれく o pixel inicial
                right = 7; -- A posiれせれこo da paralela
@@ -571,6 +575,8 @@ dados_inimigos = {
           sprite_final = 27;
           speed_x = 0;
           speed_y = 0.5;
+          largura = 1;
+          altura = 1;
           hitbox = {
                left = 0; --Serれく o pixel inicial
                right = 7; -- A posiれせれこo da paralela
@@ -585,6 +591,8 @@ dados_inimigos = {
           sprite_final = 23;
           speed_x = 0;
           speed_y = 2;
+          largura = 1;
+          altura = 1;
           hitbox = {
                left = 0; --Serれく o pixel inicial
                right = 7; -- A posiれせれこo da paralela
