@@ -39,16 +39,12 @@ sprites = {
 
           };
 
-          shockwaves = {
-               propagation = 40;
-               speed = 3;
-          };
-
           transition_waves = 5;
           quantia_waves = 5;
      }
    
      trava_tiro = 0;
+     trava_onda_choque = 0;
      trava_input = 0;
           
      quantia_inimigos = 0;
@@ -63,6 +59,7 @@ sprites = {
      particulas={};
      shockwaves={};
      
+     shockwave_player = nil;
      
      tempo = 0;
      trava_wave = 0;
@@ -155,11 +152,13 @@ end
 -->8
 --fun. auxiliares (jogo)
 
-function atirar()
+function criar_bala()
      if trava_tiro <= 0 and btn(5) and modo =='jogo' then
           local bala = {
                x = player.x,
                y = player.y,
+               sx = 0;
+               sy = -3;
                hitbox = {
                     left = 0;
                     right = 0;
@@ -175,10 +174,39 @@ function atirar()
      end
 end
 
+function criar_onda_de_choque()
+    if trava_onda_choque <= 0 and btn(4) and modo == 'jogo' then
+          player.timer_invencivel = 1 *var.fps;
+        trava_onda_choque = 1 * var.fps
+        shockwave_player = {
+            x = player.x,
+            y = player.y,
+            raio = 2,
+            propagation = 20,
+            speed = 3,
+            cor = 12
+        }
+    else
+        if trava_onda_choque > 0 then
+            trava_onda_choque -= 1
+        end
+    end
+end
+
+function mover_onda_especial()
+    if shockwave_player then
+        shockwave_player.raio += shockwave_player.speed
+        if shockwave_player.raio >= shockwave_player.propagation then
+            shockwave_player = nil  -- remove a onda
+        end
+    end
+end
+
 function mover_bala() 
      for bala in all(balas) do
           if bala.y > 0 then
-               bala.y -= var.bala_speed;
+               bala.x += bala.sx;
+               bala.y += bala.sy;
                atualizar_hitbox(bala,hitbox_bala);
           else 
                del(balas,bala);
@@ -189,7 +217,15 @@ function mover_bala()
           if bul.x < 128 and bul.x > 0 and bul.y > 0 and bul.y < 128 then 
                bul.x +=bul.sx;
                bul.y += bul.sy;
-               atualizar_hitbox(bul,hitbox_bala_inimiga)
+               atualizar_hitbox(bul,hitbox_bala_inimiga);
+
+               
+               if shockwave_player and colidir_especial(shockwave_player, bul) then
+                bul.sx *= (-2)
+                bul.sy *= (-2)
+                add(balas, bul)
+                del(balas_inimigos, bul)
+            end
           else 
                del(balas_inimigos,bul);
           end
@@ -235,8 +271,8 @@ end
 
 function mover_shockwave()
      for sw in all(shockwaves) do
-          sw.raio += var.shockwaves.speed;
-          if sw.raio >= var.shockwaves.propagation then
+          sw.raio += sw.speed;
+          if sw.raio >= sw.propagation then
                del(shockwaves,sw);
           end
      end
@@ -256,8 +292,10 @@ function draw_jogo()
      draw_particulas();
      draw_shockwaves();
      draw_balas();
+     draw_onda_especial();
 
-     print(#balas_inimigos);
+     print();
+
 end
 
 function update_jogo()
@@ -268,8 +306,10 @@ function update_jogo()
      mover_particula();
      mover_shockwave();
      mover_bala();
+     mover_onda_especial();
      
-     atirar();
+     criar_bala();
+     criar_onda_de_choque();
      
      mover_player();
      validar_morte_player();
@@ -359,6 +399,11 @@ function draw_balas()
      end
 end
 
+function draw_onda_especial()
+    if shockwave_player then
+        circ(shockwave_player.x, shockwave_player.y, shockwave_player.raio, shockwave_player.cor)
+    end
+end
 -->8
 --tela inicial
 function draw_inicio()
@@ -555,6 +600,8 @@ function criar_shockwave(x,y)
           x = x;
           y = y;
           raio = 1;
+          propagation = 40;
+          speed = 3;
      }
      add(shockwaves,sw);
 end
@@ -595,15 +642,19 @@ function colidir(a, b)
     return colidiu
 end
 
--- function colidir(ponto, circulo)
- 
---     -- distれけncia ao quadrado (evita sqrt se possれとvel)
---     local dx = circulo.x - ponto.x
---     local dy = circulo.y - ponto.y
---     local dist2 = dx*dx + dy*dy
+function colidir_especial(onda, obj)
 
---     return dist2 < circulo.raio*circulo.raio
--- end
+    -- Encontra o ponto mais próximo do centro dentro do retângulo
+    local closest_x = mid(obj.hitbox.left, onda.x, obj.hitbox.right)  -- mid = clamp
+    local closest_y = mid(obj.hitbox.top, onda.y, obj.hitbox.bottom)
+
+    -- Distância ao quadrado (evita sqrt se possível)
+    local dx = onda.x - closest_x;
+    local dy = onda.y - closest_y;
+    local dist2 = dx*dx + dy*dy
+
+    return dist2 < onda.raio*onda.raio
+end
 
 
 function atualizar_hitbox(persona, dados)
