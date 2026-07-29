@@ -11,23 +11,23 @@ sprites = {
      hp = 4;
      hp_vazio = 5;
 
-     bala = 9;
+     bala = 8;
      bala_inimigo_apagada = 9;
      bala_inimigo_acesa = 10;
+     bala_relfetida = 11;
 }
 
      var = {
           fps = 30;
           
           speed = 2;
-          bala_speed = 4;
           
-          animation_inimigo_por_frame = 0.1;
           delay_tiro = 0.1;
           delay_inv = 3;
           delay_spawn = 2;
           delay_input_travado = 5;
-          
+          delay_onda_especial = 4;
+     
           esquerda = -1;
           direita = 1;
           
@@ -159,6 +159,7 @@ function criar_bala()
                y = player.y,
                sx = 0;
                sy = -3;
+               sprite_atual = sprites.bala;
                hitbox = {
                     left = 0;
                     right = 0;
@@ -177,15 +178,15 @@ end
 function criar_onda_de_choque()
     if trava_onda_choque <= 0 and btn(4) and modo == 'jogo' then
           player.timer_invencivel = 1 *var.fps;
-        trava_onda_choque = 1 * var.fps
-        shockwave_player = {
-            x = player.x,
-            y = player.y,
-            raio = 2,
-            propagation = 20,
-            speed = 3,
-            cor = 12
-        }
+          trava_onda_choque = var.delay_onda_especial * var.fps
+          shockwave_player = {
+               x = player.x,
+               y = player.y,
+               raio = 2,
+               propagation = 20,
+               speed = 3,
+               cor = 12
+          }
     else
         if trava_onda_choque > 0 then
             trava_onda_choque -= 1
@@ -219,10 +220,17 @@ function mover_bala()
                bul.y += bul.sy;
                atualizar_hitbox(bul,hitbox_bala_inimiga);
 
+
+               if sin(tempo/10) < 0.5 then 
+                    bul.sprite_atual = sprites.bala_inimigo_acesa;
+               else 
+                    bul.sprite_atual=sprites.bala_inimigo_apagada;
+               end
                
                if shockwave_player and colidir_especial(shockwave_player, bul) then
-                bul.sx *= (-2)
-                bul.sy *= (-2)
+                bul.sx *= (-3)
+                bul.sy *= (-3)
+                bul.sprite_atual = sprites.bala_relfetida;
                 add(balas, bul)
                 del(balas_inimigos, bul)
             end
@@ -382,13 +390,17 @@ function draw_player()
      else 
           spr(player.sprite,player.x,player.y);
      end
+
+     if trava_onda_choque > 0 then
+          print(ceil(trava_onda_choque/var.fps),player.x+2, player.y-8)
+     end
      
 end
 
 function draw_balas()
      if #balas > 0 then  
           for bala in all(balas) do
-               spr(sprites.bala, bala.x, bala.y);
+               spr(bala.sprite_atual, bala.x, bala.y);
           end
      end
 
@@ -470,7 +482,7 @@ function criar_inimgo(id)
                sprite_inicial = dados_inimigos[id].sprite_inicial;
                sprite_final = dados_inimigos[id].sprite_final;
                hitbox_dados = dados_inimigos[id].hitbox; 
-               --speed_x = dados_inimigos[id].speed_x;
+               speed_x = 0;--dados_inimigos[id].speed_x;
                speed_y = dados_inimigos[id].speed_y;
                largura = dados_inimigos[id].largura;
                altura = dados_inimigos[id].altura;
@@ -485,8 +497,9 @@ end
 function mover_inimigos()
      for inimigo in all(inimigos) do
           animar_inimigo(inimigo);
+          inimigo.x += inimigo.speed_x;
           inimigo.y += inimigo.speed_y;
-          atualizar_hitbox(inimigo,hitbox_inimigo);
+          atualizar_hitbox(inimigo,dados_inimigos[inimigo.id].hitbox);
 
           
           for bala in all(balas) do
@@ -499,7 +512,6 @@ function mover_inimigos()
           if inimigo.timer_acao == 0 then   
                --sfx(1);
                realizar_acao(inimigo);
-               inimigo.timer_acao = inimigo.delay_acao;
           else 
                inimigo.timer_acao-=1;
           end
@@ -511,7 +523,29 @@ function realizar_acao(inim)
      if inim.tipo == "atirador" then
           sfx(1)
           inimigo_atira(inim);
+     elseif inim.tipo == "ariete" then
+          disparada_inim(inim);
      end
+end
+
+function disparada_inim(inim)
+     local dist = player.y - inim.y;
+     if inim.speed_y == 0 then
+          if inim.x > player.x then
+               inim.speed_x = -5;
+          else
+               inim.speed_x = 5; 
+          end
+          inim.timer_acao = inim.delay_acao;
+     else 
+          if abs(dist) <= 6 then
+               inim.speed_x = 0;
+               inim.speed_y = 0;
+               sfx(1)
+               inim.timer_acao = inim.delay_acao;
+          end
+     end
+
 end
 
 function inimigo_atira(inim)
@@ -532,7 +566,7 @@ function inimigo_atira(inim)
             y = inim.y,
             sx = cos(ang) * velocidade,  -- componente x da velocidade
             sy = sin(ang) * velocidade,  -- componente y da velocidade
-            sprite_atual = sprites.bala,
+            sprite_atual = sprites.bala_inimigo_apagada,
             hitbox = {
                left = 0;
                right = 0;
@@ -542,29 +576,30 @@ function inimigo_atira(inim)
         }
         inim.timer_animation = inim.delay_acao - 1*var.fps;
         add(balas_inimigos, bala_inimigo)
+        inim.timer_acao = inim.delay_acao;
     end
 end
 
 function apagar_inimigo(inim) --No momento, vai sれは recolocar no topo
      if inim.y > 128 or inim.hp == 0 then
 
-          
           if inim.hp == 0 then
                criar_explosion(inim, paleta_explosion_inim);
                quantia_inimigos -=1;
-               del(inimigos,inim);
+               del(inimigos,inim);     
           else
                inim.x = rnd(flr(100))+10;
                inim.y = -16;
           end
-
-          
+  
           validar_fim_wave();
+     end
 
-          -- if not (modo == 'morto' or modo=='wave') then
-          --      criar_inimgo();
-          -- end
-
+     if (inim.x < 0 or inim.x > 128) then
+          inim.speed_x = dados_inimigos[inim.id].speed_x;
+          inim.speed_y = dados_inimigos[inim.id].speed_y;
+          inim.y = -16;
+          inim.x = (rnd(1) * 100) + 12;
      end
 end
 
@@ -676,13 +711,6 @@ hitbox_player = { --Sempre vai do 0 ao 7, pois comeれせa no pixel 1,1
      bottom = 7;
 }
 
-hitbox_inimigo = { --do 0 ao 7
-     left = 0; --Serれく o pixel inicial
-     right = 7; -- A posiれせれこo da paralela
-     top = 0;
-     bottom = 5;
-}
-
 hitbox_bala = {
      left = 1; --Serれく o pixel inicial
      right = 4; -- A posiれせれこo da paralela
@@ -710,7 +738,7 @@ dados_inimigos = {
           largura = 1;
           altura = 1;
           tipo = "idle";
-          delay_acao = 5 * var.fps;
+          delay_acao = 0;
           delay_animacao = 0.1 * var.fps;
           hitbox = {
                left = 0; --Serれく o pixel inicial
@@ -729,7 +757,7 @@ dados_inimigos = {
           largura = 1;
           altura = 1;
           tipo="atirador";
-          delay_acao = 2 * var.fps;
+          delay_acao = 3 * var.fps;
           delay_animacao = 0.3 * var.fps;
           hitbox = {
                left = 0; --Serれく o pixel inicial
@@ -748,7 +776,7 @@ dados_inimigos = {
           largura = 1;
           altura = 1;
           tipo = "ariete";
-          delay_acao = 0 * var.fps;
+          delay_acao = 1 * var.fps;
           delay_animacao = 0.1 * var.fps;
           hitbox = {
                left = 0; --Serれく o pixel inicial
@@ -774,7 +802,7 @@ end
 
 function update_wave()
      id_inimigos_hordas = {
-          {1,2,3,1,2},
+          {3,3,3,3,3},
           {1,1,1,1,1,1},
           {3,3,3,3,3,3,3},
           {2,1,1,1,2,3},
@@ -806,12 +834,12 @@ paleta_explosion_player = {7,12,1,6}
 
 __gfx__
 00000000000820000008800000028000777777776666066600000000000000000000000000000000000000000000000000000000000000000000000000000000
-000000000008200000088000000280007ccc8cc70010011600000000000000000099000000022000000880000000000000000000000000000000000000000000
-0070070000288200002882000002820078888a8762002400000000000000000009a7900000288200008ee8000000000000000000000000000000000000000000
-0007700002c88200008cc80000288c007cccaaa761100046000000000000000009aa9000028ee82008e77e800000000000000000000000000000000000000000
-0007700028ce882008e7ce800028ec8078888a87622200260000000000000000099a9000028ee82008e77e800000000000000000000000000000000000000000
-0070070028668820886666880288668277cc8c776600011600000000000000000099000000288200008ee8000000000000000000000000000000000000000000
-0000000028888e20e888888e02e88882077c87700601066000000000000000000009000000022000000880000000000000000000000000000000000000000000
+000000000008200000088000000280007ccc8cc70010011600000000000000000099000000022000000880000001100000000000000000000000000000000000
+0070070000288200002882000002820078888a8762002400000000000000000009a7900000288200008ee800001cc10000000000000000000000000000000000
+0007700002c88200008cc80000288c007cccaaa761100046000000000000000009aa9000028ee82008e77e8001c77c1000000000000000000000000000000000
+0007700028ce882008e7ce800028ec8078888a87622200260000000000000000099a9000028ee82008e77e8001c77c1000000000000000000000000000000000
+0070070028668820886666880288668277cc8c776600011600000000000000000099000000288200008ee800001cc10000000000000000000000000000000000
+0000000028888e20e888888e02e88882077c87700601066000000000000000000009000000022000000880000001100000000000000000000000000000000000
 00000000028882000288882000288820007777000066060000000000000000000000000000000000000000000000000000000000000000000000000000000000
 03300330033003300330033003300330000cc000000cc000000cc000000cc0000055550000566500005665000062260009000090090000900900009009000090
 3bb33bb33bb33bb33bb33bb33bb33bb300cccc0000cccc0000cccc0000cccc00056666500566665006622660062882609a9009a99a9009a99a9009a99a9009a9
